@@ -210,7 +210,7 @@ def main(args):
     trainer_SPN = Trainer_SPN(
       model=model_SPN,
       train_loader=train_loader_SPN,
-      val_loader=test_loader_SPN,
+      val_loader=val_loader_SPN,
       test_loader=test_loader_SPN,
       criterion=criterion_SPN,
       optimizer=optimizer_adam,
@@ -499,6 +499,7 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
 
 if __name__ == "__main__":
     main(parser.parse_args())
+
 
 
 

@@ -45,13 +45,13 @@ parser.add_argument(
 )
 parser.add_argument(
     "--epochs",
-    default=12,
+    default=20,
     type=int,
     help="Number of epochs (passes through the entire dataset) to train for",
 )
 parser.add_argument(
     "--epoch-size",
-    default=1000,
+    default=2000,
     type=int,
     help="The size of each epoch",
 )
@@ -86,6 +86,18 @@ parser.add_argument(
     type=float,
     help="Weight decay (L2 regularization factor)",
 )
+parser.add_argument(
+    "--load",
+    default="",
+    type=str,
+    help="Path to a saved model file to load instead of creating a new model",
+)
+parser.add_argument(
+    "--test",
+    action="store_true",
+    help="If set, skip training and only run validation and test on the model",
+)
+
 
 
 
@@ -173,20 +185,26 @@ def main(args):
     #     pin_memory=True,
     # )
 
-    ## TODO: Implement SPN
-    # model_SPN = SPN(num_classes=3)
-    model_SPN = CNN(height=224, width=224, channels=3, class_count=3)
-
+    if args.load and args.load != "":
+        print(f"Loading model from '{args.load}'")
+        model_SPN = torch.load(args.load, map_location=DEVICE)
+    else:
+        # model_SPN = SPN(num_classes=3)
+        model_SPN = CNN(height=224, width=224, channels=3, class_count=3)
 
     criterion_SPN = nn.CrossEntropyLoss()
-    optimizer_adam = torch.optim.Adam(params=model_SPN.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    optimizer_adam = torch.optim.Adam(
+        params=model_SPN.parameters(),
+        lr=args.learning_rate,
+        weight_decay=args.weight_decay
+    )
+
     log_dir = get_summary_writer_log_dir(args)
     print(f"Writing logs to {log_dir}")
     summary_writer = SummaryWriter(
       str(log_dir),
       flush_secs=5
     )
-    
 
     ## TODO: Implement Trainer
     trainer_SPN = Trainer_SPN(
@@ -199,24 +217,25 @@ def main(args):
       summary_writer=summary_writer,
       device=DEVICE
     )
-    trainer_SPN.train(
-      epochs=args.epochs,
-      val_frequency=args.val_frequency,
-      print_frequency=args.print_frequency,
-      log_frequency=args.log_frequency
-    )
-    # trainer = Trainer(
-    #     model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
-    # )
-    # 
-    # trainer.train(
-    #     args.epochs,
-    #     args.val_frequency,
-    #     print_frequency=args.print_frequency,
-    #     log_frequency=args.log_frequency,
-    # )
+
+    if args.test:
+        print("Test-only mode: skipping training and running validation + test.")
+        # Validation
+        trainer_SPN.validate()
+        # Test
+        test_results = trainer_SPN.test()
+        print(f"Test-only results: accuracy={test_results['accuracy']}%, loss={test_results['loss']}")
+    else:
+        # Normal training loop
+        trainer_SPN.train(
+          epochs=args.epochs,
+          val_frequency=args.val_frequency,
+          print_frequency=args.print_frequency,
+          log_frequency=args.log_frequency
+        )
 
     summary_writer.close()
+
 
 
 
@@ -314,8 +333,21 @@ class Trainer_SPN:
                 # self.validate() will put the model in validation mode,
                 # so we have to switch back to train mode afterwards
                 self.model.train()
-        self.test()
+        t_acc, t_loss = self.test()
         self.model.train()
+
+        idx = self.summary_writer.log_dir.find("CNN_")
+        model_name = self.summary_writer.log_dir[idx:]
+
+        i = 0
+        while i < 10:
+          name = os.path.join(Path("model"),f"model='{model_name}'_loss={t_loss}_acc={t_acc}%_run_{str(i)}")
+          if os.path.isfile(name):
+            i += 1
+            continue
+          else:
+            torch.save(self.model, name)
+            return
 
 
 
@@ -356,7 +388,7 @@ class Trainer_SPN:
         total_loss = 0
 
         with torch.no_grad():
-            for batch1, batch0, labels in self.test_loader:
+            for batch0, batch1, labels in self.test_loader:
                 batch0 = batch0.to(self.device)
                 batch1 = batch1.to(self.device)
                 labels = labels.to(self.device)
@@ -382,6 +414,7 @@ class Trainer_SPN:
         print(f"Test accuracy: {accuracy * 100}; Average loss: {average_loss}")
         with open(f"{self.summary_writer.log_dir}/test.txt", "a") as f:
             f.write(f"Test accuracy: {accuracy * 100}; Average loss: {average_loss}\n")
+        return {"accuracy": accuracy * 100, "loss": average_loss}
 
 
     def validate(self):
@@ -454,7 +487,7 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
         from getting logged to the same TB log directory (which you can't easily
         untangle in TB).
     """
-    tb_log_dir_prefix = f'CNN_bs={args.batch_size}_lr={args.learning_rate}_reverse=True_run_'
+    tb_log_dir_prefix = f'CNN_bs={args.batch_size}_lr={args.learning_rate}_run_'
     i = 0
     while i < 1000:
         tb_log_dir = args.log_dir / (tb_log_dir_prefix + str(i))
@@ -466,7 +499,6 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
 
 if __name__ == "__main__":
     main(parser.parse_args())
-
 
 
 

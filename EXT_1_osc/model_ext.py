@@ -190,7 +190,7 @@ def main(args):
         model_SPN = torch.load(args.load, map_location=DEVICE)
     else:
         # model_SPN = SPN(num_classes=3)
-        model_SPN = CNN(height=224, width=224, channels=3, class_count=3, max_epochs=args.epochs, min_dropout:0, max_dropout:0.7)
+        model_SPN = CNN(height=224, width=224, channels=3, class_count=3, max_epochs=args.epochs, min_dropout=0, max_dropout=0.7)
 
     criterion_SPN = nn.CrossEntropyLoss()
     optimizer_adam = torch.optim.Adam(

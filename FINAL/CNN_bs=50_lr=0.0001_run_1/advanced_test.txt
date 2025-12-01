@@ -1,0 +1,9 @@
+Test accuracy: 48.554913294797686; Average loss: 1.4257294806567105
+
+Per class fits: [120, 123, 9]
+Per class labels: [173, 173, 173]
+Per class guesses: [249, 260, 10]
+
+Per class frequency of guess (guesses/sum(guesses)): [0.4797687861271676, 0.5009633911368016, 0.019267822736030827]
+Per class confidence to guess (fit/guesses): [0.4819277108433735, 0.47307692307692306, 0.9]
+Per class accuracy (fit/tots): [0.6936416184971098, 0.7109826589595376, 0.05202312138728324]

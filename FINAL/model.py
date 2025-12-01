@@ -414,7 +414,7 @@ class Trainer_SPN:
         print(f"Test accuracy: {accuracy * 100}; Average loss: {average_loss}")
         with open(f"{self.summary_writer.log_dir}/test.txt", "a") as f:
             f.write(f"Test accuracy: {accuracy * 100}; Average loss: {average_loss}\n")
-        return {"accuracy": accuracy * 100, "loss": average_loss}
+        return (accuracy * 100, average_loss)
 
 
     def validate(self):

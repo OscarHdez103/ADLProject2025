@@ -187,7 +187,7 @@ def main(args):
 
     if args.load and args.load != "":
         print(f"Loading model from '{args.load}'")
-        model_SPN = torch.load(args.load, map_location=DEVICE, weights_only=False)
+        model_SPN = torch.load(args.load, map_location=DEVICE)
     else:
         # model_SPN = SPN(num_classes=3)
         model_SPN = CNN(height=224, width=224, channels=3, class_count=3)
@@ -223,8 +223,8 @@ def main(args):
         # Validation
         trainer_SPN.validate()
         # Test
-        test_acc, test_loss = trainer_SPN.test()
-        print(f"Test-only results: accuracy={test_acc}%, loss={test_loss}")
+        test_results = trainer_SPN.test()
+        print(f"Test-only results: accuracy={test_results['accuracy']}%, loss={test_results['loss']}")
     else:
         # Normal training loop
         trainer_SPN.train(
@@ -385,7 +385,6 @@ class Trainer_SPN:
     def test(self):
         self.model.eval()
         results = {"preds": [], "labels": []}
-        confusion = [[0,0,0],[0,0,0],[0,0,0]]
         total_loss = 0
 
         with torch.no_grad():
@@ -399,28 +398,13 @@ class Trainer_SPN:
                 preds = logits.argmax(dim=-1).cpu().numpy()
                 results["preds"].extend(list(preds))
                 results["labels"].extend(list(labels.cpu().numpy()))
-
-       
+        
         # test_labels = [0,0,0]
         # for l in results["labels"]:
         #   test_labels[l] += 1
         # with open(f"{self.summary_writer.log_dir}/test.txt", "a") as f:
         #     f.write(f"Test Labels: {test_labels}\n")
         # return
-        fits = [0,0,0]
-        tots = [0,0,0]
-        guesses = [0,0,0]
-        for i, l in enumerate(results["labels"]):
-                confusion[l][results["preds"][i]] += 1
-                
-                tots[results["labels"][i]] += 1
-                guesses[results["preds"][i]] += 1
-                if l == results["preds"][i]:
-                        fits[l] += 1
-        class_acc = [fits[i]/tots[i] for i in range(len(tots))]
-        class_guess = [fits[i]/guesses[i] for i in range(len(tots))]
-        class_freq = [guesses[i]/sum(guesses) for i in range(len(tots))]
-
 
         accuracy = compute_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
@@ -430,16 +414,6 @@ class Trainer_SPN:
         print(f"Test accuracy: {accuracy * 100}; Average loss: {average_loss}")
         with open(f"{self.summary_writer.log_dir}/test.txt", "a") as f:
             f.write(f"Test accuracy: {accuracy * 100}; Average loss: {average_loss}\n")
-            f.write(f"\n")
-            f.write(f"Confusion matrix: {confusion}\n")
-            f.write(f"\n")
-            f.write(f"Per class fits: {fits}\n")
-            f.write(f"Per class labels: {tots}\n")
-            f.write(f"Per class guesses: {guesses}\n")
-            f.write(f"\n")
-            f.write(f"Per class frequency of guess (guesses/sum(guesses)): {class_freq}\n")
-            f.write(f"Per class confidence to guess (fit/guesses): {class_guess}\n")
-            f.write(f"Per class accuracy (fit/tots): {class_acc}\n")
         return (accuracy * 100, average_loss)
 
 

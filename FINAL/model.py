@@ -111,7 +111,6 @@ else:
 
 
 def main(args):
-    ## TODO: DON'T KNOW WHAT THIS IS FOR
     transform_SPN = transforms.Compose([
       transforms.Resize((224, 224)),
       transforms.ToTensor(),
